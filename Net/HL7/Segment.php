@@ -1,5 +1,7 @@
 <?php
+
 /* vim: set expandtab tabstop=4 shiftwidth=4 softtabstop=4: */
+
 // +----------------------------------------------------------------------+
 // | PHP version 4                                                        |
 // +----------------------------------------------------------------------+
@@ -14,13 +16,14 @@
 // | license@php.net so we can mail you a copy immediately.               |
 // +----------------------------------------------------------------------+
 // | Authors: D.A.Dokter <dokter@w20e.com>                                |
+// | Updated by: D.A.Rivera <diegoriveramdq at gmail.com>                 |
 // +----------------------------------------------------------------------+
 //
 // $Id: Segment.php,v 1.6 2004/07/05 08:57:28 wyldebeast Exp $
 
 class Net_HL7_Segment {
 
-    var $_fields;
+    private $_fields;
 
     /**
      * Create an instance of this segment. A segment may be created with just
@@ -35,7 +38,7 @@ class Net_HL7_Segment {
      *
      * Example: <code>
      *
-     * $seg = new Net_HL7_Segment("PID");
+     * $seg =& new Net_HL7_Segment("PID");
      *
      * $seg->setField(3, "12345678");
      * echo $seg->getField(1);
@@ -50,12 +53,11 @@ class Net_HL7_Segment {
      * @param mixed Name of the segment
      * @param array Fields for segment
      */
-    function Net_HL7_Segment($name, $fields = array())
-    {
+    public function __construct($name, array $fields = array()) {
         // Is the name 3 upper case characters?
-        //
+        //        
         if ((!$name) || (strlen($name) != 3) || (strtoupper($name) != $name)) {
-            trigger_error("Name should be 3 characters, uppercase", E_USER_ERROR);
+            throw new Exception("Name should be 3 characters, uppercase. String given: $name");
         }
 
         $this->_fields = array();
@@ -71,14 +73,13 @@ class Net_HL7_Segment {
         }
     }
 
-
     /**
      * Set the field specified by index to value, and return some true value
      * if the operation succeeded. Indices start at 1, to stay with the HL7
      * standard. Trying to set the value at index 0 has no effect.  The value
      * may also be a reference to an array (that may itself contain arrays)
      * to support composed fields (and subcomponents).
-     *
+     * 
      * To set a field to the HL7 null value, instead of omitting a field, can
      * be achieved with the _Net_HL7_NULL type, like:
      * <code>
@@ -92,8 +93,7 @@ class Net_HL7_Segment {
      * @return boolean
      * @access public
      */
-    function setField($index, $value= "")
-    {
+    function setField($index, $value= "") {
         if (!($index && $value)) {
             return false;
         }
@@ -108,7 +108,6 @@ class Net_HL7_Segment {
         return true;
     }
 
-
     /**
      * Get the field at index. If the field is a composed field, you might
      * ask for the result to be an array like so:
@@ -121,11 +120,12 @@ class Net_HL7_Segment {
      * @return mixed The value of the field
      * @access public
      */
-    function getField($index)
-    {
-        return $this->_fields[$index];
+    function getField($index) {
+        if (isset($this->_fields[$index]))
+            return $this->_fields[$index];
+        else
+            return null;
     }
-
 
     /**
      * Get the number of fields for this segment, not including the name
@@ -133,11 +133,9 @@ class Net_HL7_Segment {
      * @return int number of fields
      * @access public
      */
-    function size()
-    {
+    function size() {
         return count($this->_fields) - 1;
     }
-
 
     /**
      * Get the fields in the specified range, or all if nothing specified. If
@@ -149,8 +147,7 @@ class Net_HL7_Segment {
      * @return array List of fields
      * @access public
      */
-    function getFields($from = 0, $to = 0)
-    {
+    function getFields($from = 0, $to = 0) {
         if (!$to) {
             $to = count($this->_fields);
         }
@@ -158,16 +155,16 @@ class Net_HL7_Segment {
         return array_slice($this->_fields, $from, $to - $from + 1);
     }
 
-
     /**
      * Get the name of the segment. This is basically the value at index 0
-     *
-     * @return mixed Name of segment
+     * 
+     * @return string Name of segment
      * @access public
      */
-    function getName()
-    {
+    function getName() {
         return $this->_fields[0];
     }
+
 }
-?>
+
+/* EOF */

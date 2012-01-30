@@ -36,13 +36,13 @@ versions untill 3.x. This API does not do XML!
 
 To create an HL7 message, simply do this:
 
-$msg =& new Net_HL7_Message();
+$msg = Net_HL7::createMessage();
 
 this gives you an empty message, that doesn't containt ANY segments
 (not even the header segment). You might also have a string
 representation of your message at hand, in which case you can do this:
 
-$msg =& new Net_HL7_Message(<your string>);
+$msg = Net_HL7::createMessage(<your string>);
 
 Make sure to escape any characters that have special meaning in PHP!
 
@@ -60,8 +60,8 @@ require_once "Net/HL7/Segments/MSH.php";
 require_once "Net/HL7/Message.php";
 require_once "Net/HL7/Connection.php";
 
-$msg  =& new Net_HL7_Message();
-$msg->addSegment(new Net_HL7_Segments_MSH());
+$msg  = Net_HL7::createMessage();
+$msg->addSegment(Net_HL7::createMSH());
 
 $seg1 = new Net_HL7_Segment("PID");
 
@@ -88,4 +88,3 @@ echo "Received answer\n" . $resp->toString(1);
 
 $conn->close();
 ?>
-

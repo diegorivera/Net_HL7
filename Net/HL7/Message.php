@@ -1,4 +1,5 @@
 <?php
+
 /* vim: set expandtab tabstop=4 shiftwidth=4 softtabstop=4: */
 // +----------------------------------------------------------------------+
 // | PHP version 4                                                        |
@@ -14,13 +15,10 @@
 // | license@php.net so we can mail you a copy immediately.               |
 // +----------------------------------------------------------------------+
 // | Authors: D.A.Dokter <dokter@w20e.com>                                |
+// | Updated by: D.A.Rivera <diegoriveramdq at gmail.com>                 |
 // +----------------------------------------------------------------------+
 //
 // $Id: Message.php,v 1.8 2004/08/06 07:38:54 wyldebeast Exp $
-
-require_once 'Net/HL7/Segment.php';
-require_once 'Net/HL7.php';
-
 
 /**
  * Class specifying the HL7 message, both request and response.
@@ -46,19 +44,18 @@ class Net_HL7_Message {
     /**
      * Array holding all segements of this message.
      */
-    var $_segments;
+    protected $_segments;
 
     /**
      * local value for segment separator
      */
-    var $_segmentSeparator;
-    var $_fieldSeparator;
-    var $_componentSeparator;
-    var $_subcomponentSeparator;
-    var $_repetitionSeparator;
-    var $_escapeChar;
-    var $_hl7Version;
-
+    protected $_segmentSeparator;
+    protected $_fieldSeparator;
+    protected $_componentSeparator;
+    protected $_subcomponentSeparator;
+    protected $_repetitionSeparator;
+    protected $_escapeChar;
+    protected $_hl7Version;
 
     /**
      * Constructor for Net_HL7_Message. Consider using the HL7 factory
@@ -82,45 +79,35 @@ class Net_HL7_Message {
      * If the message couldn't be created, for example due to a erroneous HL7
      * message string, an error is raised.
      */
-    public function __construct($msgStr = "", $hl7Globals = array())
-    {
+    public function __construct($msgStr = "", $hl7Globals = array()) {
 
         //Array holding the segments
         $this->_segments = array();
 
         // Control characters and other HL7 properties
         //
-        !empty($hl7Globals["SEGMENT_SEPARATOR"]) ?
-            $this->_segmentSeparator = $hl7Globals["SEGMENT_SEPARATOR"] :
-            $this->_segmentSeparator = "\015";
-        !empty($hl7Globals["FIELD_SEPARATOR"]) ?
-            $this->_fieldSeparator = $hl7Globals["FIELD_SEPARATOR"] :
-            $this->_fieldSeparator = "|";
-        !empty($hl7Globals["COMPONENT_SEPARATOR"]) ?
-            $this->_componentSeparator = $hl7Globals["COMPONENT_SEPARATOR"] :
-            $this->_componentSeparator = "^";
-        !empty($hl7Globals["SUBCOMPONENT_SEPARATOR"]) ?
-            $this->_subcomponentSeparator = $hl7Globals["SUBCOMPONENT_SEPARATOR"] :
-            $this->_subcomponentSeparator = "&";
-        !empty($hl7Globals["REPETITION_SEPARATOR"]) ?
-            $this->_repetitionSeparator = $hl7Globals["REPETITION_SEPARATOR"] :
-            $this->_repetitionSeparator = "~";
-        !empty($hl7Globals["ESCAPE_CHAR"]) ?
-            $this->_escapeChar = $hl7Globals["ESCAPE_CHAR"] :
-            $this->_escapeChar = "\\";
-        !empty($hl7Globals["HL7_VERSION"]) ?
-            $this->_hl7Version = $hl7Globals["HL7_VERSION"] :
-            $this->_hl7Version = "2.2";
 
+        // if a string is being imported, you need at least a segment separator
+        // to bootstrap the importing proccess (the rest control chars are loaded
+        // from the MSH once it was splitted so this is mandatory
+        // else you should construct your message object using the factory
+        if (!empty($hl7Globals["SEGMENT_SEPARATOR"]))
+            $this->_segmentSeparator = $hl7Globals["SEGMENT_SEPARATOR"];
+        else
+            $this->_segmentSeparator = "\r";
 
         // If an HL7 string is given to the constructor, parse it.
-        if ($msgStr) {
+        if (is_string($msgStr) && $msgStr != "") {
 
+            //TODO mejorar esto
             $segments = preg_split("/[\n\\" . $this->_segmentSeparator . "]/", $msgStr, -1, PREG_SPLIT_NO_EMPTY);
-
+            //$segments = preg_split("/[\n\r]/", $msgStr, -1, PREG_SPLIT_NO_EMPTY);
             // The first segment should be the control segment
             //
             preg_match("/^([A-Z0-9]{3})(.)(.)(.)(.)(.)(.)/", $segments[0], $matches);
+
+            //var_dump($segments);
+            //var_dump($matches);
 
             $hdr = $matches[1];
             $fldSep = $matches[2];
@@ -133,24 +120,25 @@ class Net_HL7_Message {
             // Check whether field separator is repeated after 4 control characters
             //
             if ($fldSep != $fldSepCtrl) {
-
-                trigger_error("Not a valid message: field separator invalid", E_USER_ERROR);
+                throw new Exception("Not a valid message: field separator invalid");
             }
 
             // Set field separator based on control segment
-            $this->_fieldSeparator        = $fldSep;
+            $this->_fieldSeparator = $fldSep;
 
             // Set other separators
-            $this->_componentSeparator    = $compSep;
+            $this->_componentSeparator = $compSep;
             $this->_subcomponentSeparator = $subCompSep;
-            $this->_escapeChar            = $esc;
-            $this->_repetitionSeparator   = $repSep;
+            $this->_escapeChar = $esc;
+            $this->_repetitionSeparator = $repSep;
 
             // Do all segments
             //
             for ($i = 0; $i < count($segments); $i++) {
 
                 $fields = preg_split("/\\" . $this->_fieldSeparator . "/", $segments[$i]);
+                //$fields = explode($fldSep, $segments[$i]);
+
                 $name = array_shift($fields);
 
                 // Now decompose fields if necessary, into arrays
@@ -162,7 +150,8 @@ class Net_HL7_Message {
                         continue;
                     }
 
-                    $comps = preg_split("/\\" . $this->_componentSeparator ."/", $fields[$j], -1, PREG_SPLIT_NO_EMPTY);
+                    //$comps = preg_split("/\\" . $this->_componentSeparator ."/", $fields[$j], -1, PREG_SPLIT_NO_EMPTY);
+                    $comps = explode($this->_componentSeparator, $fields[$j]);
 
                     for ($k = 0; $k < count($comps); $k++) {
 
@@ -175,12 +164,19 @@ class Net_HL7_Message {
                     (count($comps) == 1) ? ($fields[$j] = $comps[0]) : ($fields[$j] = $comps);
                 }
 
-                $seg;
+                $seg = null;
                 $segClass = "Net_HL7_Segments_$name";
 
                 // Let's see whether it's the a special segment
                 //
-                if (@include_once "Net/HL7/Segments/$name.php") {
+                
+                // originally this was done dinamically loading the PHP file.
+                // This has some implications that I dont want, so if you want
+                // to use your extended message classes, you should include
+                // them manually. Or you can uncomment the followin IF line and comment mine.
+                //if (@include_once dirname(__FILE__)."Net/HL7/Segments/$name.php") {
+                //echo print_r($fields);
+                if (class_exists($segClass)) {
                     array_unshift($fields, $this->_fieldSeparator);
 
                     $seg = new $segClass($fields);
@@ -197,20 +193,18 @@ class Net_HL7_Message {
         }
     }
 
-
     /**
-     * Add a segment.
+     * Add a segment. 
      *
      * The segment will be added to the end of the message. The
      * segment should be an instance of Net_HL7_Segment.
      *
-     * @param object An instance of Net_HL7_Segment
+     * @param Net_HL7_Segment An instance of Net_HL7_Segment
      * @return boolean
      * @access public
      * @see Net_HL7_Segment
      */
-    public function addSegment(&$segment)
-    {
+    function addSegment(Net_HL7_Segment &$segment) {
         if (!is_a($segment, "Net_HL7_Segment")) {
             trigger_error("The object is not a Net_HL7_Segment", E_USER_WARNING);
         }
@@ -219,26 +213,24 @@ class Net_HL7_Message {
             $this->_resetCtrl($segment);
         }
 
-        array_push($this->_segments, &$segment);
+        array_push($this->_segments, $segment);
 
         return true;
     }
 
-
     /**
-     * Insert a segment.
+     * Insert a segment. 
      *
      * The segment should be an instance of Net_HL7_Segment. If the
      * index is not given, nothing happens.
-     *
-     * @param object An instance of Net_HL7_Segment
+     * 
+     * @param Net_HL7_Segment An instance of Net_HL7_Segment
      * @param int Index where segment is inserted
      * @return boolean
      * @access public
      * @see Net_HL7_Segment
      */
-    function insertSegment(&$segment, $idx = "")
-    {
+    function insertSegment(Net_HL7_Segment &$segment, $idx = "") {
         if ((!$idx) || ($idx > count($this->_segments))) {
             trigger_error("Index out of range", E_USER_WARNING);
             return false;
@@ -251,41 +243,39 @@ class Net_HL7_Message {
 
         if ($idx == 0) {
             $this->_resetCtrl($segment);
-            array_unshift($this->_segments, &$segment);
+            array_unshift($this->_segments, $segment);
         } elseif ($idx == count($this->_segments)) {
-            array_push($this->_segments, &$segment);
+            array_push($this->_segments, $segment);
         } else {
             $this->_segments =
-                array_merge(
-                            array_slice($this->_segments, 0, $idx),
-                            array(&$segment),
-                            array_slice($this->_segments, $idx)
-                            );
+                    array_merge(
+                    array_slice($this->_segments, 0, $idx), array(&$segment), array_slice($this->_segments, $idx)
+            );
         }
 
         return true;
     }
 
-
     /**
-     * Return the segment specified by $index.
+     * Return the segment specified by $index. 
      *
      * Segment count within the message starts at 0.
      *
      * @param int Index where segment is inserted
-     * @return object An instance of Net_HL7_Segment
+     * @return Net_HL7_Segment An instance of Net_HL7_Segment
      * @access public
      * @see Net_HL7_Segment
      */
-    public function &getSegmentByIndex($index)
-    {
+    function getSegmentByIndex($index) {
         if ($index >= count($this->_segments)) {
             return NULL;
         }
 
+        if (!isset($this->_segments[$index]))
+            return NULL;
+
         return $this->_segments[$index];
     }
-
 
     /**
      * Return an array of all segments with the given name
@@ -294,8 +284,7 @@ class Net_HL7_Message {
      * @return array List of segments identified by name
      * @access public
      */
-    public function getSegmentsByName($name)
-    {
+    function getSegmentsByName($name) {
         $segmentsByName = array();
 
         foreach ($this->_segments as $seg) {
@@ -308,9 +297,8 @@ class Net_HL7_Message {
         return $segmentsByName;
     }
 
-
     /**
-     * Remove the segment indexed by $index.
+     * Remove the segment indexed by $index. 
      *
      * If it doesn't exist, nothing happens, if it does, all segments
      * after this one will be moved one index up.
@@ -319,8 +307,7 @@ class Net_HL7_Message {
      * @return boolean
      * @access public
      */
-    public function removeSegmentByIndex($index)
-    {
+    function removeSegmentByIndex($index) {
         if ($index < count($this->_segments)) {
             array_splice($this->_segments, $index, 1);
         }
@@ -328,23 +315,21 @@ class Net_HL7_Message {
         return true;
     }
 
-
     /**
-     * Set the segment on index.
+     * Set the segment on index. 
      *
      * If index is out of range, or not provided, do nothing. Setting
      * MSH on index 0 will revalidate field separator, control
      * characters and hl7 version, based on MSH(1), MSH(2) and
      * MSH(12).
      *
-     * @param object An instance of Net_HL7_Segment
+     * @param Net_HL7_Segment An instance of Net_HL7_Segment
      * @param int Index where segment is set
      * @return boolean
      * @access public
      * @see Net_HL7_Segment
      */
-    public function setSegment(&$segment, $idx)
-    {
+    function setSegment(Net_HL7_Segment &$segment, $idx) {
         if ((!isset($idx)) || $idx > count($this->_segments)) {
             trigger_error("Index out of range", E_USER_WARNING);
             return false;
@@ -364,35 +349,33 @@ class Net_HL7_Message {
         return true;
     }
 
-
     /**
      * After change of MSH, reset control fields
-     *
-     * @param object An instance of Net_HL7_Segment
+     * 
+     * @param Net_HL7_Segments_MSH An instance of Net_HL7_Segment_MSH
      * @return boolean
      * @access private
      * @see Net_HL7_Segment
      */
-    public function _resetCtrl(&$segment)
-    {
+    protected function _resetCtrl(Net_HL7_Segments_MSH &$segment) {
+
         if ($segment->getField(1)) {
             $this->_fieldSeparator = $segment->getField(1);
         }
 
         if (preg_match("/(.)(.)(.)(.)/", $segment->getField(2), $matches)) {
-            $this->_componentSeparator    = $matches[1];
-            $this->_repetitionSeparator   = $matches[2];
-            $this->_escapeChar            = $matches[3];
+            $this->_componentSeparator = $matches[1];
+            $this->_repetitionSeparator = $matches[2];
+            $this->_escapeChar = $matches[3];
             $this->_subcomponentSeparator = $matches[4];
         }
 
         if ($segment->getField(12)) {
-            $this->hl7Version = $segment->getField(12);
+            $this->_hl7Version = $segment->getField(12);
         }
 
         return true;
     }
-
 
     /**
      * Return an array containing all segments in the right order.
@@ -400,31 +383,28 @@ class Net_HL7_Message {
      * @return array List of all segments
      * @access public
      */
-    public function getSegments()
-    {
+    function getSegments() {
         return $this->_segments;
     }
 
-
     /**
-     * Return a string representation of this message.
+     * Return a string representation of this message. 
      *
      * This can be used to send the message over a socket to an HL7
      * server. To print to other output, use the $pretty argument as
      * some true value. This will not use the default segment
      * separator, but '\n' instead.
-     *
+     * 
      * @param boolean Whether to use \n as separator or default (\r).
      * @return mixed String representation of HL7 message
      * @access public
      */
-    public function toString($pretty = False)
-    {
+    function toString($pretty = False) {
         $msg = "";
 
         // Make sure MSH(1) and MSH(2) are ok, even if someone has changed
-        // these values
-        //
+        // these values 
+        //        
         $msh = $this->_segments[0];
 
         $this->_resetCtrl($msh);
@@ -440,7 +420,7 @@ class Net_HL7_Message {
                     for ($i = 0; $i < count($fld); $i++) {
 
                         (is_array($fld[$i])) ? ($msg .= join($this->_subcomponentSeparator, $fld[$i])) :
-                            ($msg .= $fld[$i]);
+                                        ($msg .= $fld[$i]);
 
 
                         if ($i < (count($fld) - 1)) {
@@ -460,7 +440,6 @@ class Net_HL7_Message {
         return $msg;
     }
 
-
     /**
      * Get the segment identified by index as string, using the
      * messsages separators.
@@ -470,8 +449,7 @@ class Net_HL7_Message {
      * @access public
      * @see Net_HL7_Segment
      */
-    public function getSegmentAsString($index)
-    {
+    function getSegmentAsString($index) {
         $seg = $this->getSegmentByIndex($index);
 
         if ($seg == NULL) {
@@ -487,7 +465,7 @@ class Net_HL7_Message {
                 for ($i = 0; $i < count($fld); $i++) {
 
                     (is_array($fld[$i])) ? ($segStr .= join($this->_subcomponentSeparator, $fld[$i])) :
-                        ($segStr .= $fld[$i]);
+                                    ($segStr .= $fld[$i]);
 
 
                     if ($i < (count($fld) - 1)) {
@@ -504,10 +482,9 @@ class Net_HL7_Message {
         return $segStr;
     }
 
-
     /**
-     * Get the field identified by $fldIndex from segment $segIndex.
-     *
+     * Get the field identified by $fldIndex from segment $segIndex. 
+     * 
      * Returns empty string if field is not set.
      *
      * @param int Index for segment to get
@@ -515,8 +492,7 @@ class Net_HL7_Message {
      * @return mixed String representation of field
      * @access public
      */
-    public function getSegmentFieldAsString($segIndex, $fldIndex)
-    {
+    function getSegmentFieldAsString($segIndex, $fldIndex) {
         $seg = $this->getSegmentByIndex($segIndex);
 
         if ($seg == NULL) {
@@ -536,7 +512,7 @@ class Net_HL7_Message {
             for ($i = 0; $i < count($fld); $i++) {
 
                 (is_array($fld[$i])) ? ($fldStr .= join($this->_subcomponentSeparator, $fld[$i])) :
-                    ($fldStr .= $fld[$i]);
+                                ($fldStr .= $fld[$i]);
 
 
                 if ($i < (count($fld) - 1)) {
@@ -551,3 +527,5 @@ class Net_HL7_Message {
     }
 
 }
+
+/* EOF */

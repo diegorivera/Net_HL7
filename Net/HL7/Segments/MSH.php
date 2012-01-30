@@ -1,4 +1,5 @@
 <?php
+
 /* vim: set expandtab tabstop=4 shiftwidth=4 softtabstop=4: */
 // +----------------------------------------------------------------------+
 // | PHP version 4                                                        |
@@ -14,19 +15,17 @@
 // | license@php.net so we can mail you a copy immediately.               |
 // +----------------------------------------------------------------------+
 // | Authors: D.A.Dokter <dokter@w20e.com>                                |
+// | Updated by: D.A.Rivera <diegoriveramdq at gmail.com>                 |
 // +----------------------------------------------------------------------+
 //
 // $Id: MSH.php,v 1.8 2004/07/05 15:41:29 wyldebeast Exp $
-
-require_once 'Net/HL7/Segment.php';
-require_once 'Net/HL7.php';
 
 /**
  * MSH (message header) segment class
  *
  * Usage:
  * <code>
- * $seg = new Net_HL7_Segments_MSH();
+ * $seg =& new Net_HL7_Segments_MSH();
  *
  * $seg->setField(9, "ADT^A24");
  * echo $seg->getField(1);
@@ -41,7 +40,7 @@ require_once 'Net/HL7.php';
  * message.  The MSH segment also contains the default settings for
  * field 2, COMPONENT_SEPARATOR, REPETITION_SEPARATOR,
  * ESCAPE_CHARACTER and SUBCOMPONENT_SEPARATOR. These fields default
- * to ^, ~, \ and & respectively.
+ * to ^, ~, \ and respectively.
  *
  * @version    $Revision: 1.8 $
  * @author     D.A.Dokter <dokter@w20e.com>
@@ -53,7 +52,7 @@ require_once 'Net/HL7.php';
 class Net_HL7_Segments_MSH extends Net_HL7_Segment {
 
     /**
-     * Create an instance of the MSH segment.
+     * Create an instance of the MSH segment. 
      *
      * If an array argument is provided, all fields will be filled
      * from that array. Note that for composed fields and
@@ -62,45 +61,29 @@ class Net_HL7_Segments_MSH extends Net_HL7_Segment {
      * will be created with the MSH 1,2,7,10 and 12 fields filled in
      * for convenience.
      */
-    function Net_HL7_Segments_MSH($fields = NULL, $hl7Globals = NULL)
-    {
-        parent::Net_HL7_Segment("MSH", $fields);
+    public function __construct(array $fields = array(), array $hl7Globals = array()) {
+        parent::__construct("MSH", $fields);
 
-        // Only fill default fields if no fields array is given
+        // Only fill default fields if no fields array is given 
         //
-        if (!isset($fields)) {
 
-            if (!is_array($hl7Globals)) {
-                $this->setField(1, '|');
-                $this->setField(2, '^~\\&');
-                $this->setField(7, strftime("%Y%m%d%H%M%S"));
-
-                // Set ID field
-                //
-                $this->setField(10, $this->getField(7) . rand(10000, 99999));
-                $this->setField(12, '2.2');
-            }
-            else {
+        if (empty($fields)) {
+            if (empty($hl7Globals)) {
+                $this->setField(1, "|");
+                $this->setField(2, "^~\\&");
+            } else {
                 $this->setField(1, $hl7Globals['FIELD_SEPARATOR']);
-                $this->setField(2,
-                                $hl7Globals['COMPONENT_SEPARATOR'] .
-                                $hl7Globals['REPETITION_SEPARATOR'] .
-                                $hl7Globals['ESCAPE_CHARACTER'] .
-                                $hl7Globals['SUBCOMPONENT_SEPARATOR']
-                                );
-                $this->setField(7, strftime("%Y%m%d%H%M%S"));
-
-                // Set ID field
-                //
-                $this->setField(10, $this->getField(7) . rand(10000, 99999));
+                $this->setField(2, $hl7Globals['COMPONENT_SEPARATOR'] .
+                                   $hl7Globals['REPETITION_SEPARATOR'] .
+                                   $hl7Globals['ESCAPE_CHARACTER'] .
+                                   $hl7Globals['SUBCOMPONENT_SEPARATOR']);
                 $this->setField(12, $hl7Globals['HL7_VERSION']);
             }
         }
     }
 
-
     /**
-     * Set the field specified by index to value.
+     * Set the field specified by index to value. 
      *
      * Indices start at 1, to stay with the HL7 standard. Trying to
      * set the value at index 0 has no effect. Setting the value on
@@ -110,14 +93,13 @@ class Net_HL7_Segments_MSH extends Net_HL7_Segment {
      * of COMPONENT_SEPARATOR, REPETITION_SEPARATOR, ESCAPE_CHARACTER
      * and SUBCOMPONENT_SEPARATOR for the message, if the string is of
      * length 4.
-     *
+     * 
      * @param int Index of field
      * @param mixed Value
      * @return boolean
      * @access public
      */
-    function setField($index, $value)
-    {
+    function setField($index, $value="") {
         if ($index == 1) {
             if (strlen($value) != 1) {
                 return false;
@@ -135,4 +117,4 @@ class Net_HL7_Segments_MSH extends Net_HL7_Segment {
 
 }
 
-?>
+/* EOF */

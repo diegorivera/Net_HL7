@@ -1,9 +1,8 @@
 <?php
 
-require_once "Net/HL7/Segment.php";
-require_once "Net/HL7.php";
+require_once "../Net/HL7/Segment.php";
+require_once "../Net/HL7.php";
 require_once "test_base.php";
-
 
 # Basic stuff
 #
@@ -24,7 +23,7 @@ ok($seg->getField(3) == "XXX", "Field 3 is XXX");
 //ok(! defined(new Net::HL7::Segment("xxx")), "Segment constructor with lowercase name");
 
 
-$seg = new Net_HL7_Segment("DG1", array(4,3,2,array(1,2,3),0));
+$seg = new Net_HL7_Segment("DG1", array(4, 3, 2, array(1, 2, 3), 0));
 
 ok($seg->getField(3) == "2", "Constructor with array ref");
 
@@ -69,4 +68,5 @@ ok($seg->size() == 8, "Size operator");
 $seg->setField(12, "x");
 
 ok($seg->size() == 12, "Size operator");
-?>
+
+/* EOF */

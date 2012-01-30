@@ -1,7 +1,7 @@
 <?php
 
-require_once "Net/HL7/Segment.php";
-require_once "Net/HL7/Segments/MSH.php";
+require_once "../Net/HL7/Segment.php";
+require_once "../Net/HL7/Segments/MSH.php";
 require_once "test_base.php";
 
 $msh = new Net_HL7_Segments_MSH();
@@ -23,4 +23,4 @@ ok($msh->getField(2) == "^~\\&", "Special fields not changed");
 $msh->setField(2, "abcd");
 ok($msh->getField(2) == "abcd", "Encoding characters field set (MSH(2))");
 
-?>
+/* EOF */

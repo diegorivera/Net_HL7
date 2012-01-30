@@ -1,4 +1,5 @@
 <?php
+
 /* vim: set expandtab tabstop=4 shiftwidth=4 softtabstop=4: */
 // +----------------------------------------------------------------------+
 // | PHP version 5                                                        |
@@ -14,6 +15,7 @@
 // | license@php.net so we can mail you a copy immediately.               |
 // +----------------------------------------------------------------------+
 // | Authors: D.A.Dokter <dokter@w20e.com>                                |
+// | Updated by: D.A.Rivera <diegoriveramdq at gmail.com>                 |
 // +----------------------------------------------------------------------+
 //
 // $Id: HL7.php,v 1.7 2004/08/06 07:38:54 wyldebeast Exp $
@@ -34,55 +36,82 @@
  * @package    Net_HL7
  * @license    http://www.php.net/license/3_0.txt  PHP License 3.0
  */
+require_once '/HL7/Connection.php';
+require_once '/HL7/Message.php';
+require_once '/HL7/Messages/ACK.php';
+require_once '/HL7/Segment.php';
+require_once '/HL7/Segments/MSH.php';
+
 class Net_HL7 {
 
     /**
      * Holds all global HL7 settings.
      */
-    var $_hl7Globals = array();
-
-
-    /**
-     * Create a new instance of the HL7 factory, and set global
-     * defaults.
-     */
-    public function __construct() {
-
-        $this->_hl7Globals['SEGMENT_SEPARATOR'] = '\015';
-        $this->_hl7Globals['FIELD_SEPARATOR'] = '|';
-        $this->_hl7Globals['NULL'] = '""';
-        $this->_hl7Globals['COMPONENT_SEPARATOR'] = '^';
-        $this->_hl7Globals['REPETITION_SEPARATOR'] = '~';
-        $this->_hl7Globals['ESCAPE_CHARACTER'] = '\\';
-        $this->_hl7Globals['SUBCOMPONENT_SEPARATOR'] = '&';
-        $this->_hl7Globals['HL7_VERSION'] = '2.2';
-    }
-
+    private static $_hl7Globals = array('SEGMENT_SEPARATOR' => "\r",
+                                        'FIELD_SEPARATOR' => "|",
+                                        'NULL' => '""',
+                                        'COMPONENT_SEPARATOR' => "^",
+                                        'REPETITION_SEPARATOR' => "~",
+                                        'ESCAPE_CHARACTER' => "\\",
+                                        'SUBCOMPONENT_SEPARATOR' => "&",
+                                        'HL7_VERSION' => "2.3");
 
     /**
      * Create a new Net_HL7_Message, using the global HL7 variables as
      * defaults.
-     *
+     * 
      * @param string Text representation of an HL7 message
-     * @return object Net_HL7_Message
+     * @return Net_HL7_Message Net_HL7_Message
+     * @access public
      */
-    public function createMessage($msgStr = "")
-    {
-        return new Net_HL7_Message($msgStr, $this->_hl7Globals);
-    }
+    static function &createMessage($msgStr = "") {
+        $msg = new Net_HL7_Message($msgStr, self::$_hl7Globals);
 
+        return $msg;
+    }
 
     /**
      * Create a new Net_HL7_Segments_MSH segment, using the global HL7
      * variables as defaults.
-     *
-     * @return object Net_HL7_Segments_MSH
+     * 
+     * @return Net_HL7_Segments_MSH Net_HL7_Segments_MSH
+     * @access public
      */
-    function createMSH()
-    {
-        return new Net_HL7_Segments_MSH($this->_hl7Globals);
+    static function &createMSH() {
+        $msh = new Net_HL7_Segments_MSH(array(), self::$_hl7Globals);
+
+        // set time of the message generation
+        $msh->setField(7, strftime("%Y%m%d%H%M%S"));
+
+        // Set ID field
+        $msh->setField(10, $msh->getField(7) . rand(10000, 99999));
+
+        return $msh;
     }
 
+    /**
+     * Creates an ACK message based on a given request.
+     * @param Net_HL7_Message $req The request you are going to ACK
+     * @return Net_HL7_Messages_ACK 
+     */
+    static function &createResponseFromRequest(Net_HL7_Message $req) {
+        $response = new Net_HL7_Messages_ACK('', self::$_hl7Globals);
+
+        $response->importRequest($req);
+
+        return $response;
+    }
+
+    /**
+     * Creates an ACK message based on the given ACK raw text
+     * (it is useful to parse the remote server's ACK messages)
+     * @param string $str
+     * @return Net_HL7_Messages_ACK 
+     */
+    static function &createResponseFromString($str) {
+        $response = new Net_HL7_Messages_ACK($str, self::$_hl7Globals);
+        return $response;
+    }
 
     /**
      * Set the component separator to be used by the factory. Should
@@ -90,16 +119,14 @@ class Net_HL7 {
      *
      * @param string Component separator char.
      * @return boolean true if value has been set.
+     * @access public
      */
-    public function setComponentSeparator($value)
-    {
-        if (strlen($value) != 1) {
+    static function setComponentSeparator($value) {
+        if (strlen($value) != 1)
             return false;
-        }
 
-        return $this->_setGlobal('COMPONENT_SEPARATOR', $value);
+        return self::_setGlobal('COMPONENT_SEPARATOR', $value);
     }
-
 
     /**
      * Set the subcomponent separator to be used by the factory. Should
@@ -107,16 +134,14 @@ class Net_HL7 {
      *
      * @param string Subcomponent separator char.
      * @return boolean true if value has been set.
+     * @access public
      */
-    public function setSubcomponentSeparator($value)
-    {
-        if (strlen($value) != 1) {
+    static function setSubcomponentSeparator($value) {
+        if (strlen($value) != 1)
             return false;
-        }
 
-        return $this->_setGlobal('SUBCOMPONENT_SEPARATOR', $value);
+        return self::_setGlobal('SUBCOMPONENT_SEPARATOR', $value);
     }
-
 
     /**
      * Set the repetition separator to be used by the factory. Should
@@ -124,16 +149,14 @@ class Net_HL7 {
      *
      * @param string Repetition separator char.
      * @return boolean true if value has been set.
+     * @access public
      */
-    public function setRepetitionSeparator($value)
-    {
-        if (strlen($value) != 1) {
+    static function setRepetitionSeparator($value) {
+        if (strlen($value) != 1)
             return false;
-        }
 
-        return $this->_setGlobal('REPETITION_SEPARATOR', $value);
+        return self::_setGlobal('REPETITION_SEPARATOR', $value);
     }
-
 
     /**
      * Set the field separator to be used by the factory. Should
@@ -141,16 +164,14 @@ class Net_HL7 {
      *
      * @param string Field separator char.
      * @return boolean true if value has been set.
+     * @access public
      */
-    public function setFieldSeparator($value)
-    {
-        if (strlen($value) != 1) {
+    static function setFieldSeparator($value) {
+        if (strlen($value) != 1)
             return false;
-        }
 
-        return $this->_setGlobal('FIELD_SEPARATOR', $value);
+        return self::_setGlobal('FIELD_SEPARATOR', $value);
     }
-
 
     /**
      * Set the segment separator to be used by the factory. Should
@@ -158,16 +179,14 @@ class Net_HL7 {
      *
      * @param string Segment separator char.
      * @return boolean true if value has been set.
+     * @access public
      */
-    public function setSegmentSeparator($value)
-    {
-        if (strlen($value) != 1) {
+    static function setSegmentSeparator($value) {
+        if (strlen($value) != 1)
             return false;
-        }
 
-        return $this->_setGlobal('SEGMENT_SEPARATOR', $value);
+        return self::_setGlobal('SEGMENT_SEPARATOR', $value);
     }
-
 
     /**
      * Set the escape character to be used by the factory. Should
@@ -175,51 +194,46 @@ class Net_HL7 {
      *
      * @param string Escape character.
      * @return boolean true if value has been set.
+     * @access public
      */
-    public function setEscapeCharacter($value)
-    {
-        if (strlen($value) != 1) {
-            {return false;
-        }
+    static function setEscapeCharacter($value) {
+        if (strlen($value) != 1)
+            return false;
 
-        return $this->_setGlobal('ESCAPE_CHARACTER', $value);
+        return self::_setGlobal('ESCAPE_CHARACTER', $value);
     }
-
 
     /**
      * Set the HL7 version to be used by the factory.
      *
      * @param string HL7 version character.
      * @return boolean true if value has been set.
+     * @access public
      */
-    public function setHL7Version($value)
-    {
-        return $this->_setGlobal('HL7_VERSION', $value);
+    static function setHL7Version($value) {
+        return self::_setGlobal('HL7_VERSION', $value);
     }
-
 
     /**
      * Set the NULL string to be used by the factory.
      *
      * @param string NULL string.
      * @return boolean true if value has been set.
+     * @access public
      */
-    public function setNull($value)
-    {
-        return $this->_setGlobal('NULL', $value);
+    static function setNull($value) {
+        return self::_setGlobal('NULL', $value);
     }
-
 
     /**
      * Convenience method for obtaining the special NULL value.
      *
      * @return string null value
+     * @access public
      */
-    public function getNull() {
-
-        return $this->_hl7Globals['NULL'];
+    static function getNull() {
+        return self::$_hl7Globals['NULL'];
     }
-
 
     /**
      * Set the HL7 global variable
@@ -229,11 +243,12 @@ class Net_HL7 {
      * @param string value
      * @return boolean True when value has been set, false otherwise.
      */
-    public function _setGlobal($name, $value)
-    {
-        $this->_hl7Globals[$name] = $value;
+    private static function _setGlobal($name, $value) {
+        self::$_hl7Globals[$name] = $value;
 
         return true;
     }
 
 }
+
+/* EOF */
